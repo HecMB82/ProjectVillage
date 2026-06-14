@@ -8,12 +8,16 @@ import javax.swing.*;
 import java.awt.*;
 import javax.sound.sampled.*;
 import java.io.File;
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
 
 public class PantallaTitulo extends JPanel {
     
-    private Image fondo;
-    
+    private Image fondo;    
     private Clip clip;
+    private float opacidadTitulo = 0f;
+    private JPanel panelSuperior;
+    private JPanel panelInferior;
 
     public PantallaTitulo(Ventana ventana) {
 
@@ -56,7 +60,7 @@ public class PantallaTitulo extends JPanel {
         panelBotones.add(btnSalir);
 
         
-        JPanel panelSuperior = new JPanel();
+        panelSuperior = new JPanel();
         panelSuperior.setLayout(new BoxLayout(panelSuperior, BoxLayout.Y_AXIS));
         panelSuperior.setOpaque(false);
         
@@ -70,7 +74,7 @@ public class PantallaTitulo extends JPanel {
 
         add(panelSuperior, BorderLayout.CENTER);
         
-        JPanel panelInferior = new JPanel();
+        panelInferior = new JPanel();
         panelInferior.setOpaque(false);
         panelInferior.setLayout(new FlowLayout(FlowLayout.LEFT, 100, 0));
         
@@ -81,6 +85,35 @@ public class PantallaTitulo extends JPanel {
         panelInferior.add(panelBotones);
 
         add(panelInferior, BorderLayout.SOUTH);
+        
+        panelSuperior.setVisible(false);
+        panelInferior.setVisible(false);
+    }
+    
+    public void iniciarEntradaTitulo() {
+
+        panelSuperior.setVisible(false);
+        panelInferior.setVisible(false);
+
+        opacidadTitulo = 0f;
+
+        Timer fade = new Timer(40, e -> {
+
+            opacidadTitulo += 0.04f;
+
+            if (opacidadTitulo >= 1f) {
+                opacidadTitulo = 1f;
+
+                panelSuperior.setVisible(true);
+                panelInferior.setVisible(true);
+
+                ((Timer) e.getSource()).stop();
+            }
+
+            repaint();
+        });
+
+        fade.start();
     }
     
     public void reproducirMusicaTitulo() {
@@ -91,12 +124,32 @@ public class PantallaTitulo extends JPanel {
 
             clip = AudioSystem.getClip();
             clip.open(audio);
+
+            FloatControl volumen =
+                    (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
+
+            volumen.setValue(-40.0f);
+
             clip.loop(Clip.LOOP_CONTINUOUSLY);
             clip.start();
 
+            Timer fadeAudio = new Timer(100, e -> {
+
+                float valor = volumen.getValue();
+
+                if (valor < -15.0f) {
+                    volumen.setValue(valor + 2.0f);
+                } else {
+                    volumen.setValue(-15.0f);
+                    ((Timer) e.getSource()).stop();
+                }
+            });
+
+            fadeAudio.start();
+
         } catch (Exception e) {
-                e.printStackTrace();
-            }
+            e.printStackTrace();
+        }
     }
 
     public void detenerMusicaTitulo() {
@@ -104,6 +157,25 @@ public class PantallaTitulo extends JPanel {
             clip.stop();
             clip.close();
         }
+    }
+    
+    public void iniciarFadeIn() {
+
+        opacidadTitulo = 0f;
+
+        Timer fade = new Timer(40, e -> {
+
+            opacidadTitulo += 0.04f;
+
+            if (opacidadTitulo >= 1f) {
+                opacidadTitulo = 1f;
+                ((Timer) e.getSource()).stop();
+            }
+
+            repaint();
+        });
+
+        fade.start();
     }
     
     @Override
@@ -118,6 +190,20 @@ public class PantallaTitulo extends JPanel {
                 getHeight(),
                 this
         );
+
+        if (opacidadTitulo < 1f) {
+            Graphics2D g2 = (Graphics2D) g;
+
+            g2.setComposite(
+                    AlphaComposite.getInstance(
+                            AlphaComposite.SRC_OVER,
+                            1f - opacidadTitulo
+                    )
+            );
+
+            g2.setColor(Color.BLACK);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+        }
     }
 
     private JButton crearBotonImagen(String rutaNormal, String rutaHover) {

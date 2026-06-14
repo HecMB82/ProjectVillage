@@ -4,6 +4,7 @@ package projectvillage;
  *
  * @author Hector
  */
+
 import javax.swing.*;
 import java.awt.*;
 import javax.sound.sampled.*;
